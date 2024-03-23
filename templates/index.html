@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ElGamal Signature Demo</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            background: #ffffff;
+        }
+        body, html {
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 600px;
+        }
+        .input-group-textarea {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        textarea {
+            min-height: 150px;
+        }
+        .equation {
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container text-center">
+        <h2>ElGamal Signature Demo</h2>
+        <div class="input-group-textarea">
+            <textarea class="form-control" id="messageInput" placeholder="Enter a large text here"></textarea>
+            <button class="btn btn-primary" onclick="signMessage()">Sign Message</button>
+        </div>
+        <p id="verifyInstruction" class="mt-3" style="display:none;">You can now verify your message by clicking on verify.</p>
+        <div id="signatureDisplay" style="display:none;" class="mt-3">
+            <h3>Signature & Public Key Information</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>r</td>
+                        <td id="rValue">-</td>
+                    </tr>
+                    <tr>
+                        <td>s</td>
+                        <td id="sValue">-</td>
+                    </tr>
+                    <tr>
+                        <td>p</td>
+                        <td id="pValue">-</td>
+                    </tr>
+                    <tr>
+                        <td>g</td>
+                        <td id="gValue">-</td>
+                    </tr>
+                    <tr>
+                        <td>Public Key</td>
+                        <td id="publicKeyValue">-</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <button class="btn btn-secondary mt-3" onclick="verifyMessage()" style="display:none;">Verify Message</button>
+        <div id="equationDisplay" class="equation"></div>
+        <p id="verificationResult" class="mt-3"></p>
+    </div>
+
+    <script>
+        let signature = {};
+        let publicKey = {};
+
+        function signMessage() {
+            const message = document.getElementById('messageInput').value;
+            $.post('/sign', { text: message }, function(response) {
+                signature = response.signature;
+                publicKey = response.public_key;
+                document.getElementById('rValue').innerText = signature.r;
+                document.getElementById('sValue').innerText = signature.s;
+                document.getElementById('pValue').innerText = publicKey.prime;
+                document.getElementById('gValue').innerText = publicKey.g;
+                document.getElementById('publicKeyValue').innerText = publicKey.public_key;
+                document.getElementById('signatureDisplay').style.display = 'block';                
+                document.querySelector('.btn-secondary').style.display = 'inline-block';
+                document.querySelector('.btn-primary').style.display = 'none';
+            }).fail(function() {
+                alert('Error: Unable to sign the message.');
+            });
+        }
+
+        function verifyMessage() {
+            const message = document.getElementById('messageInput').value;
+            // Assuming the server response includes the left_side and right_side values
+            $.post('/verify', { text: message, signature: JSON.stringify(signature), public_key: JSON.stringify(publicKey) }, function(response) {
+                let equationDisplay = document.getElementById('equationDisplay');
+                // Update this line to include dynamic left and right side values from the server response
+                equationDisplay.innerHTML = `Verification Equation: Left Side = ${response.left_side}, Right Side = ${response.right_side}`;
+                equationDisplay.style.color = response.authentic ? 'green' : 'red';
+
+                let verificationResult = document.getElementById('verificationResult');
+                if (response.authentic) {
+                    verificationResult.innerHTML = '<p>The message is authentic.<br><strong>You can modify the text and verify again to see if the message is still authentic.</strong></p>';
+                    equationDisplay.style.display = 'block';
+                } else {
+                    verificationResult.innerHTML = 'The message is <strong>not authentic.</strong>';
+                    equationDisplay.style.display = 'block';
+                }
+            }).fail(function() {
+                alert('Error: Unable to verify the message.');
+            });
+        }
+        </script>
+    </body>
+</html>
